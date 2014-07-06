@@ -2,9 +2,16 @@ package org.xander;
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.nio.file.attribute.FileTime;
+import java.util.Calendar;
 
 public class FileChangeNotification {
     public static void main(String[] args) {
+//        watcher();
+        anotherWatcher();
+    }
+
+    private static void watcher() {
         try {
             WatchService watchService = FileSystems.getDefault().newWatchService();
             Path dir = Paths.get("/home/xander/test/");
@@ -36,6 +43,40 @@ public class FileChangeNotification {
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void anotherWatcher() {
+        try {
+            WatchService watchService = FileSystems.getDefault().newWatchService();
+            Path dir = Paths.get("/home/xander/test/");
+
+            dir.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+            FileTime lastModified = null;
+
+            while (true) {
+                WatchKey key = watchService.take();
+                for (WatchEvent<?> event : key.pollEvents()) {
+                    if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY) {
+                        FileTime time = Files.getLastModifiedTime(dir.resolve(Paths.get("file.txt")));
+                        if (lastModified == null) {
+                            lastModified = time;
+                        }
+                        if (lastModified.compareTo(time) < 0) {
+                            System.out.println("reload");
+                            lastModified = time;
+                            Calendar date = Calendar.getInstance();
+                            date.setTimeInMillis(time.toMillis());
+                            System.out.println("time is " + date.getTime() + "\n");
+                        } else {
+                            System.out.println("reload skipped");
+                        }
+                    }
+                }
+                key.reset();
+            }
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
